@@ -43,7 +43,7 @@ let dataCategories = [
 
 let dataProducts = [
   {
-    id: 3,
+    id: "3",
     title: "Nuevo titulo",
     slug: "nuevo-titulo",
     price: 1000,
@@ -57,11 +57,12 @@ let dataProducts = [
       updatedAt: "2026-03-04T18:34:54.000Z"
     },
     images: ["https://placeimg.com/640/480/any"],
+    isDeleted: false,
     creationAt: "2026-03-04T17:42:16.000Z",
     updatedAt: "2026-03-05T02:20:07.000Z"
   },
   {
-    id: 18,
+    id: "18",
     title: "Sleek White & Orange Wireless Gaming Controller",
     slug: "sleek-white-orange-wireless-gaming-controller",
     price: 6,
@@ -75,11 +76,12 @@ let dataProducts = [
       updatedAt: "2026-03-05T04:17:29.000Z"
     },
     images: ["https://i.imgur.com/ZANVnHE.jpeg"],
+    isDeleted: false,
     creationAt: "2026-03-04T17:42:16.000Z",
     updatedAt: "2026-03-04T20:54:36.000Z"
   },
   {
-    id: 28,
+    id: "28",
     title: "Sleek Modern Leather Sofa",
     slug: "sleek-modern-leather-sofa",
     price: 53,
@@ -93,12 +95,35 @@ let dataProducts = [
       updatedAt: "2026-03-04T18:24:25.000Z"
     },
     images: ["https://i.imgur.com/Qphac99.jpeg"],
+    isDeleted: false,
     creationAt: "2026-03-04T17:42:16.000Z",
     updatedAt: "2026-03-04T17:42:16.000Z"
   }
 ];
 
+let dataComments = [
+  {
+    id: "1",
+    productId: "3",
+    content: "Sản phẩm này đẹp",
+    author: "Nguyen Van A",
+    isDeleted: false,
+    creationAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "2",
+    productId: "18",
+    content: "Giá khá ổn",
+    author: "Tran Van B",
+    isDeleted: false,
+    creationAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
 module.exports = {
   dataCategories,
-  dataProducts
+  dataProducts,
+  dataComments
 };

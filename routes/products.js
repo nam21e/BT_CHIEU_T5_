@@ -1,103 +1,119 @@
 var express = require('express');
 var router = express.Router();
-let slugify = require('slugify');
-let { dataCategories, dataProducts } = require('../utils/data')
-let { GenID, getItemById } = require('../utils/idHandler')
 
-/* GET users listing. */
-router.get('/', function (req, res, next) {
-    let result = dataProducts.filter(
-        function (e) {
-            return !e.isDeleted;
-        }
-    )
-    res.send(result);
-});
-router.get('/:id', function (req, res, next) {
-    let id = req.params.id;
-    let result = dataProducts.filter(
-        function (e) {
-            return e.id == id && !e.isDeleted;
-        }
-    )
-    if (result.length) {
-        res.send(result[0])
-    } else {
-        res.status(404).send({
-            message: "ID NOT FOUND"
-        })
-    }
+const { dataProducts, dataCategories } = require('../utils/data');
+
+// GET all products
+router.get('/', function(req, res) {
+  res.json(dataProducts);
 });
 
-router.post('/', function (req, res) {
-    let getCate = getItemById(req.body.category,
-        dataCategories
-    );
-    if (!getCate) {
-        res.status(404).send({
-            message: "ID CATE NOT FOUND"
-        })
-        return
+// GET product by id
+router.get('/:id', function(req, res) {
+  const id = parseInt(req.params.id);
+  const product = dataProducts.find(item => item.id === id);
+
+  if (!product) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
+  res.json(product);
+});
+
+// POST product
+router.post('/', function(req, res) {
+  const { title, price, description, categoryId, images } = req.body;
+
+  if (!title || price === undefined || !categoryId) {
+    return res.status(400).json({
+      message: 'title, price, categoryId are required'
+    });
+  }
+
+  const category = dataCategories.find(item => item.id === categoryId);
+  if (!category) {
+    return res.status(400).json({
+      message: 'categoryId does not exist'
+    });
+  }
+
+  const newProduct = {
+    id: dataProducts.length
+      ? Math.max(...dataProducts.map(item => item.id)) + 1
+      : 1,
+    title,
+    slug: title.toLowerCase().trim().replace(/\s+/g, '-'),
+    price,
+    description: description || '',
+    category: category,
+    images: Array.isArray(images) ? images : [],
+    creationAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  dataProducts.push(newProduct);
+
+  res.status(201).json({
+    message: 'Create product success',
+    data: newProduct
+  });
+});
+
+// PUT product
+router.put('/:id', function(req, res) {
+  const id = parseInt(req.params.id);
+  const { title, price, description, categoryId, images } = req.body;
+
+  const index = dataProducts.findIndex(item => item.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
+  let category = dataProducts[index].category;
+
+  if (categoryId !== undefined) {
+    const foundCategory = dataCategories.find(item => item.id === categoryId);
+    if (!foundCategory) {
+      return res.status(400).json({ message: 'categoryId does not exist' });
     }
-    let newProduct = {
-        id: GenID(dataProducts),
-        title: req.body.name,
-        slug: slugify(req.body.title, {
-            replacement: '-',
-            remove: undefined,
-            lower: true,
-            strict: true
-        }),
-        price: req.body.price,
-        description: req.body.description,
-        images: req.body.images,
-        category: getCate,
-        creationAt: new Date(Date.now()),
-        updatedAt: new Date(Date.now()),
-    }
-    dataProducts.push(newProduct);
-    res.send(newProduct)
-})
-router.put('/:id', function (req, res) {
-    let id = req.params.id;
-    let result = dataProducts.filter(
-        function (e) {
-            return e.id == id && !e.isDeleted;
-        }
-    )
-    if (result.length) {
-        result = result[0];
-        let keys = Object.keys(req.body);
-        for (const key of keys) {
-            if (result[key]) {
-                result[key] = req.body[key]
-            }
-        }
-        result.updatedAt = new Date(Date.now())
-        res.send(result)
-    } else {
-        res.status(404).send({
-            message: "ID NOT FOUND"
-        })
-    }
-})
-router.delete('/:id', function (req, res) {
-    let id = req.params.id;
-    let result = dataProducts.filter(
-        function (e) {
-            return e.id == id && !e.isDeleted;
-        }
-    )
-    if (result.length) {
-        result = result[0];
-        result.isDeleted = true;
-        result.updatedAt = new Date(Date.now())
-        res.send(result)
-    } else {
-        res.status(404).send({
-            message: "ID NOT FOUND"
-        })
-    }
-})
+    category = foundCategory;
+  }
+
+  dataProducts[index] = {
+    ...dataProducts[index],
+    title: title ?? dataProducts[index].title,
+    slug: title
+      ? title.toLowerCase().trim().replace(/\s+/g, '-')
+      : dataProducts[index].slug,
+    price: price ?? dataProducts[index].price,
+    description: description ?? dataProducts[index].description,
+    category: category,
+    images: images ?? dataProducts[index].images,
+    updatedAt: new Date().toISOString()
+  };
+
+  res.json({
+    message: 'Update product success',
+    data: dataProducts[index]
+  });
+});
+
+// DELETE product
+router.delete('/:id', function(req, res) {
+  const id = parseInt(req.params.id);
+  const index = dataProducts.findIndex(item => item.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
+  const deletedProduct = dataProducts.splice(index, 1);
+
+  res.json({
+    message: 'Delete product success',
+    data: deletedProduct[0]
+  });
+});
 
 module.exports = router;

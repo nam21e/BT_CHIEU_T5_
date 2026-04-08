@@ -1,126 +1,113 @@
 var express = require('express');
 var router = express.Router();
-let slugify = require('slugify');
-let { dataCategories, dataProducts } = require('../utils/data')
-let { GenID } = require('../utils/idHandler')
-let categoryModel = require('../schemas/categories')
 
-/* GET users listing. */
-router.get('/', async function (req, res, next) {
-  let data = await categoryModel.find({
-    isDeleted: false
+const { dataCategories, dataProducts } = require('../utils/data');
+
+// GET all categories
+router.get('/', function(req, res) {
+  res.json(dataCategories);
+});
+
+// GET category by id
+router.get('/:id', function(req, res) {
+  const id = parseInt(req.params.id);
+  const category = dataCategories.find(item => item.id === id);
+
+  if (!category) {
+    return res.status(404).json({ message: 'Category not found' });
+  }
+
+  res.json(category);
+});
+
+// POST category
+router.post('/', function(req, res) {
+  const { name, slug, image } = req.body;
+
+  if (!name || !slug || !image) {
+    return res.status(400).json({
+      message: 'name, slug, image are required'
+    });
+  }
+
+  const newCategory = {
+    id: dataCategories.length
+      ? Math.max(...dataCategories.map(item => item.id)) + 1
+      : 1,
+    name,
+    slug,
+    image,
+    creationAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  dataCategories.push(newCategory);
+
+  res.status(201).json({
+    message: 'Create category success',
+    data: newCategory
   });
-  res.send(data);
 });
-router.get('/:id', async function (req, res, next) {
-  try {
-    let id = req.params.id;
-    let result = await categoryModel.find({
-      isDeleted: false,
-      _id: id
-    });
-    if (result.length) {
-      res.send(result[0])
-    } else {
-      res.status(404).send({
-        message: "ID NOT FOUND"
-      })
-    }
-  } catch (error) {
-    res.status(404).send({
-      message: error.message
-    })
+
+// PUT category
+router.put('/:id', function(req, res) {
+  const id = parseInt(req.params.id);
+  const { name, slug, image } = req.body;
+
+  const index = dataCategories.findIndex(item => item.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Category not found' });
   }
+
+  dataCategories[index] = {
+    ...dataCategories[index],
+    name: name ?? dataCategories[index].name,
+    slug: slug ?? dataCategories[index].slug,
+    image: image ?? dataCategories[index].image,
+    updatedAt: new Date().toISOString()
+  };
+
+  res.json({
+    message: 'Update category success',
+    data: dataCategories[index]
+  });
 });
-// router.get('/:id/products', function (req, res, next) {
-//   let id = req.params.id;
-//   let result = dataCategories.filter(
-//     function (e) {
-//       return e.id == id && !e.isDeleted;
-//     }
-//   )
-//   if (result.length) {
-//     result = dataProducts.filter(
-//       function (e) {
-//         return e.category.id == id
-//       }
-//     )
-//     res.send(result)
-//   } else {
-//     res.status(404).send({
-//       message: "ID NOT FOUND"
-//     })
-//   }
-// });
-//CREATE UPDATE DELETE
-router.post('/', async function (req, res) {
-  let newCate = new categoryModel({
-    name: req.body.name,
-    slug: slugify(req.body.name, {
-      replacement: '-',
-      remove: undefined,
-      lower: true,
-      strict: true
-    }),
-    image: req.body.image
-  })
-  await newCate.save()
-  res.send(newCate)
-})
-router.put('/:id', async function (req, res) {
 
-  try {
-    let id = req.params.id;
-    //c1
-    // let result = await categoryModel.findOne({
-    //   isDeleted: false,
-    //   _id: id
-    // });
-    // if (result) {
-    //   let keys = Object.keys(req.body);
-    //   for (const key of keys) {
-    //     result[key] = req.body[key];
-    //   }
-    //   await result.save();
-    //   res.send(result)
-    // } else {
-    //   res.status(404).send({
-    //     message: "ID NOT FOUND"
-    //   })
-    // }
-    let result = await categoryModel.findByIdAndUpdate(
-      id, req.body, {
-      new: true
-    })
-    res.send(result)
+// DELETE category
+router.delete('/:id', function(req, res) {
+  const id = parseInt(req.params.id);
+  const index = dataCategories.findIndex(item => item.id === id);
 
-  } catch (error) {
-    res.status(404).send({
-      message: error.message
-    })
+  if (index === -1) {
+    return res.status(404).json({ message: 'Category not found' });
   }
-})
-router.delete('/:id', async function (req, res) {
-  try {
-    let id = req.params.id;
-    let result = await categoryModel.findOne({
-      isDeleted: false,
-      _id: id
-    });
-    if (result) {
-      result.isDeleted = true
-      await result.save();
-      res.send(result)
-    } else {
-      res.status(404).send({
-        message: "ID NOT FOUND"
-      })
-    }
-  } catch (error) {
-    res.status(404).send({
-      message: error.message
-    })
+
+  const deletedCategory = dataCategories.splice(index, 1);
+
+  res.json({
+    message: 'Delete category success',
+    data: deletedCategory[0]
+  });
+});
+
+// GET products by category id
+router.get('/:id/products', function(req, res) {
+  const id = parseInt(req.params.id);
+
+  const category = dataCategories.find(item => item.id === id);
+  if (!category) {
+    return res.status(404).json({ message: 'Category not found' });
   }
-})
+
+  const categoryProducts = dataProducts.filter(
+    item => item.category && item.category.id === id
+  );
+
+  res.json({
+    category,
+    products: categoryProducts
+  });
+});
 
 module.exports = router;

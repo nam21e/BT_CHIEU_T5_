@@ -1,45 +1,53 @@
-let userModel = require('../schemas/users')
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+
+// DATA GIẢ
+let users = [
+    {
+        _id: "1",
+        username: "admin",
+        email: "admin@gmail.com",
+        password: bcrypt.hashSync("123456", 10),
+        role: { name: "admin" },
+        loginCount: 0,
+        isDeleted: false
+    }
+];
+
 module.exports = {
-    CreateAnUser: async function (
-        username, password, email, role, fullname, avatarUrl, status, loginCount) {
-        let newUser = new userModel({
-            username: username,
-            password: password,
-            email: email,
-            fullName: fullname,
-            avatarUrl: avatarUrl,
-            status: status,
-            role: role,
-            loginCount: loginCount
-        });
-        await newUser.save();
+
+    // CREATE
+    CreateAnUser: async function (username, password, email, role) {
+        const hash = await bcrypt.hash(password, 10);
+
+        let newUser = {
+            _id: Date.now().toString(),
+            username,
+            password: hash,
+            email,
+            role: { name: "user" },
+            loginCount: 0,
+            isDeleted: false
+        };
+
+        users.push(newUser);
         return newUser;
     },
+
+    // FIND
     FindUserByUsername: async function (username) {
-        return await userModel.findOne({
-            username: username,
-            isDeleted: false
-        })
+        return users.find(u => u.username === username && !u.isDeleted);
     },
+
     FindUserByEmail: async function (email) {
-        return await userModel.findOne({
-            email: email,
-            isDeleted: false
-        })
-    }, FindUserByToken: async function (token) {
-        return await userModel.findOne({
-            forgotPasswordToken: token,
-            isDeleted: false
-        })
+        return users.find(u => u.email === email && !u.isDeleted);
     },
+
+    FindUserByToken: async function (token) {
+        return users.find(u => u.forgotPasswordToken === token);
+    },
+
     FindUserById: async function (id) {
-        try {
-            return await userModel.findOne({
-                _id: id,
-                isDeleted: false
-            }).populate('role')
-        } catch (error) {
-            return false
-        }
+        return users.find(u => u._id == id && !u.isDeleted);
     }
-}
+};

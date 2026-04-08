@@ -3,7 +3,6 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-let mongoose = require('mongoose')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -20,32 +19,30 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ===== ROUTES =====
 app.use('/', indexRouter);
-app.use('/api/v1/users', usersRouter);
-app.use('/api/v1/auth', require('./routes/auth'));
-app.use('/api/v1/products', require('./routes/products'))
-app.use('/api/v1/categories', require('./routes/categories'))
-app.use('/api/v1/roles', require('./routes/roles'))
-mongoose.connect('mongodb://localhost:27017/NNPTUD-C5');
-mongoose.connection.on('connected', function () {
-  console.log("connected");
-})
-mongoose.connection.on('disconnecting', function () {
-  console.log("disconnected");
-})
 
-// catch 404 and forward to error handler
+// 👉 chỉ giữ 1 auth route (tránh trùng)
+app.use('/api/v1/auth', require('./routes/auth'));
+
+app.use('/api/v1/users', usersRouter);
+app.use('/api/v1/products', require('./routes/products'));
+app.use('/api/v1/categories', require('./routes/categories'));
+app.use('/api/v1/roles', require('./routes/roles'));
+
+
+// ❌ XÓA HOÀN TOÀN MONGO (QUAN TRỌNG)
+// mongoose.connect(...)
+// mongoose.connection...
+
+
+// catch 404
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
   res.status(err.status || 500);
   res.send(err.message);
 });

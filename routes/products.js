@@ -3,15 +3,28 @@ var router = express.Router();
 
 const { dataProducts, dataCategories } = require('../utils/data');
 
+// Hàm lấy ID lớn nhất + 1, lưu kiểu string
+function getNextId(list) {
+  if (!list.length) return '1';
+  const maxId = Math.max(...list.map(item => Number(item.id)));
+  return String(maxId + 1);
+}
+
 // GET all products
 router.get('/', function(req, res) {
-  res.json(dataProducts);
+  const activeProducts = dataProducts.filter(item => item.isDeleted !== true);
+  const deletedProducts = dataProducts.filter(item => item.isDeleted === true);
+
+  res.json({
+    activeProducts,
+    deletedProducts
+  });
 });
 
 // GET product by id
 router.get('/:id', function(req, res) {
-  const id = parseInt(req.params.id);
-  const product = dataProducts.find(item => item.id === id);
+  const id = req.params.id;
+  const product = dataProducts.find(item => String(item.id) === id);
 
   if (!product) {
     return res.status(404).json({ message: 'Product not found' });
@@ -30,7 +43,10 @@ router.post('/', function(req, res) {
     });
   }
 
-  const category = dataCategories.find(item => item.id === categoryId);
+  const category = dataCategories.find(
+    item => String(item.id) === String(categoryId)
+  );
+
   if (!category) {
     return res.status(400).json({
       message: 'categoryId does not exist'
@@ -38,15 +54,14 @@ router.post('/', function(req, res) {
   }
 
   const newProduct = {
-    id: dataProducts.length
-      ? Math.max(...dataProducts.map(item => item.id)) + 1
-      : 1,
+    id: getNextId(dataProducts),
     title,
     slug: title.toLowerCase().trim().replace(/\s+/g, '-'),
     price,
     description: description || '',
     category: category,
     images: Array.isArray(images) ? images : [],
+    isDeleted: false,
     creationAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -61,10 +76,10 @@ router.post('/', function(req, res) {
 
 // PUT product
 router.put('/:id', function(req, res) {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
   const { title, price, description, categoryId, images } = req.body;
 
-  const index = dataProducts.findIndex(item => item.id === id);
+  const index = dataProducts.findIndex(item => String(item.id) === id);
 
   if (index === -1) {
     return res.status(404).json({ message: 'Product not found' });
@@ -73,10 +88,14 @@ router.put('/:id', function(req, res) {
   let category = dataProducts[index].category;
 
   if (categoryId !== undefined) {
-    const foundCategory = dataCategories.find(item => item.id === categoryId);
+    const foundCategory = dataCategories.find(
+      item => String(item.id) === String(categoryId)
+    );
+
     if (!foundCategory) {
       return res.status(400).json({ message: 'categoryId does not exist' });
     }
+
     category = foundCategory;
   }
 
@@ -99,20 +118,39 @@ router.put('/:id', function(req, res) {
   });
 });
 
-// DELETE product
+// DELETE product -> soft delete
 router.delete('/:id', function(req, res) {
-  const id = parseInt(req.params.id);
-  const index = dataProducts.findIndex(item => item.id === id);
+  const id = req.params.id;
+  const product = dataProducts.find(item => String(item.id) === id);
 
-  if (index === -1) {
+  if (!product) {
     return res.status(404).json({ message: 'Product not found' });
   }
 
-  const deletedProduct = dataProducts.splice(index, 1);
+  product.isDeleted = true;
+  product.updatedAt = new Date().toISOString();
 
   res.json({
-    message: 'Delete product success',
-    data: deletedProduct[0]
+    message: 'Soft delete product success',
+    data: product
+  });
+});
+
+// RESTORE product
+router.patch('/restore/:id', function(req, res) {
+  const id = req.params.id;
+  const product = dataProducts.find(item => String(item.id) === id);
+
+  if (!product) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
+  product.isDeleted = false;
+  product.updatedAt = new Date().toISOString();
+
+  res.json({
+    message: 'Restore product success',
+    data: product
   });
 });
 
